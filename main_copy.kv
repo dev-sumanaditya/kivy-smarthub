@@ -1,0 +1,43 @@
+<MainLayout>:
+    Video:
+        source:"./videos/1.mp4"
+        state:"play"
+        options: {'eos': 'loop'}
+        height: 400
+        width: 1280
+    BoxLayout:
+        width: 1280
+        height: 400
+        padding: [40,60,40,60]
+        orientation: 'vertical'
+        
+        ShadowLabel:
+            text: 'Tell me and I forget. Teach me and I remember. Involve me and I learn.'
+            font_size: 80
+            font_name: './fonts/1.ttf'
+            tint: .5, .5, .5, .5
+            color: [1,1,1,1]
+            bold: True
+            text_size: self.size
+            halign: 'center'
+            valign: 'middle'
+            decal: 2, 0
+            tint: .0, .0, 0, .8
+            
+        
+<ShadowLabel>:
+    canvas.before:
+        Color:
+            rgba: root.tint
+
+        Rectangle:
+            pos:
+                int(self.center_x - self.texture_size[0] / 2.) + root.decal[0],\
+                int(self.center_y - self.texture_size[1] / 2.) + root.decal[1]
+
+            size: root.texture_size
+            texture: root.texture
+
+        Color:
+            rgba: 1, 1, 1, 1
+        
