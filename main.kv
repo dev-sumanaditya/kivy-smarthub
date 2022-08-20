@@ -1,11 +1,4 @@
-WindowManager:
-    LoadingScreen:
-    HomeScreen:
-    SettingsScreen:
-
 <LoadingScreen>:
-    name: "loading_screen"
-
     BoxLayout:
         height: root.height
         width: root.width
@@ -35,9 +28,23 @@ WindowManager:
             font_name: './fonts/1.ttf'
             color: [1,1,1,1]
 
-<HomeScreen>:
-    name: "home_screen"
+<LoginScreen>:
+    canvas.before:
+        Color:
+            rgba: [0.01,0.14,0.494,1]
+        Rectangle:
+            size: self.size
+            pos: self.pos
 
+<WifiScreen>:
+    canvas.before:
+        Color:
+            rgba: [0.01,0.14,0.494,1]
+        Rectangle:
+            size: self.size
+            pos: self.pos
+
+<HomeScreen>:
     SlideComponent:
         mbr: menubar
         height: root.height
@@ -46,16 +53,87 @@ WindowManager:
         id: menubar
 
 <SettingsScreen>:
-    name: "settings_screen"
+    Image:
+        source: './assets/images/menubg.jpg'
+        height: 400
+        width: 1280
 
     BoxLayout:
         width: 1280
         height: 400
+        orientation:'vertical'
 
-        Button:
-            size_hint: (0.2,0.2)
-            text: "Go Back"
-            on_press: self.parent.parent.goToHome()
+        BoxLayout:
+            size_hint: (1, 0.2)
+            canvas.before:
+                Color:
+                    rgba: 0, 0, 0, 0.3
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+            StackLayout:
+                padding: 20
+                spacing: 20
+                orientation: 'lr-tb'
+
+                BackButton:
+
+                Label:
+                    text: 'Settings'
+                    font_size: 30
+                    size_hint_x: None
+                    size: self.texture_size
+        BoxLayout:
+            padding: 40
+            orientation: 'vertical'
+
+            GridLayout:
+                cols: 1
+
+                StackLayout:
+                    orientation: 'lr-tb'
+                    Label:
+                        text: 'Change font size:'
+                        font_size: 20
+                        font_name: './fonts/3.ttf'
+                        size_hint_x: None
+                        size: self.texture_size
+                StackLayout:
+                    orientation: 'lr-tb'
+                    
+                    SliderComponent:
+                        fontLabel: sliderLabel
+
+                        orientation: 'horizontal'
+                StackLayout:
+                    orientation: 'lr-tb'
+                    
+                    SliderLabel:
+                        id: sliderLabel
+                        font_name: './fonts/5.ttf'
+                        size_hint_x: None
+                        size: self.texture_size
+            BoxLayout:
+                size_hint: [1,0.2]
+                orientation: 'horizontal'
+                spacing: 60
+                Button:
+                    text: 'Connect to wifi'
+                    on_release: root.connect_wifi()
+                    background_color: [0.2, 0.7, 0.8, 1]
+                    size_hint: [0.3,1]
+                    color: [0,0,0,1]
+                    bold: True
+                    background_normal: ''
+                Button:
+                    text: 'Logout'
+                    on_release: root.logout()
+                    background_color: [0.6, 0, 0, 1]
+                    size_hint: [0.3,1]
+                    color: [1,1,1,1]
+                    bold: True
+                    background_normal: ''
 
 
 
