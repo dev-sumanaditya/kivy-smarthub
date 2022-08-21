@@ -97,7 +97,8 @@ def is_wifi_connected():
         status = nmcli.networking.connectivity()
         if(str(status) == 'NetworkConnectivity.FULL'):
             return True
-        return False
+        else:
+            return False
     except Exception as e:
         return e
 
@@ -121,7 +122,6 @@ def connect_to_saved_ap(ssid):
 
 def connect_to_new_ap(ssid, password):
     try:
-        print('connecting to ap - ' + ssid)
         connect = nmcli.device.wifi_connect(ssid, password, 'wlan0');
         return connect
     except Exception as e:
@@ -175,30 +175,31 @@ class LoadingScreen(Screen):
 
     def __init__(self,**kwargs):
         super(LoadingScreen, self).__init__(**kwargs)
-        print('Entered Loading screen');
 
     def on_enter(self, *args):
-        Clock.schedule_once(self.check, 4);
+        Clock.schedule_once(self.check, 6);
 
     # remember to add some delay before changing screen. I spent 10 days trying to solve the problem - no screen with name "bla_bla_bla".
     # Adding the clock.schedule_once of 4 second worked. I think the screen manager takes time to register all the screens so changing the screen in init method or onenter will throw error.
     # thanks for taking time to read this - (Version 2.1.0 - 2nd commit)
     def check(self, *args):
         is_connected = is_wifi_connected()
-        if(is_connected):
+        if(is_connected == True):
             print('already connected')
             self.check_auth_state_and_proceed()
         else:
             profiles = get_saved_profiles()
             if(len(profiles) > 0):
+                connected = False
                 for profile in profiles:
                     res = connect_to_saved_ap(profile.name)
-                    if(res == None or 'None'):
-                        print('connection success.')
+                    if(res == None):
+                        connected = True
                         self.check_auth_state_and_proceed()
                     else:
                         continue
-                self.go_to_wifi_screen()
+                if(connected == False):
+                    self.go_to_wifi_screen()
             else:
                 self.go_to_wifi_screen()
 
@@ -220,50 +221,62 @@ class WifiScreen(Screen):
 
     def __init__(self,**kwargs):
         super(WifiScreen, self).__init__(**kwargs)
-        print('entered wifi screen')
 
     def back_button_handler(self, event):
         self.remove_widget(self.connect_layout)
         self.add_widget(self.scrlView)
 
-    def connection_success_handler(self, *args):    
+    def connection_success_handler(self, *args):
         token = localStorage.getItem('_token')
         sm.transition = RiseInTransition()
         if(token):
             sm.current = "home_screen"
         else:
             sm.current = "login_screen"
+    
+    def connection_failed_handler(self, *args):
+        self.remove_widget(self.connecting_layout)
+        self.add_widget(self.connect_layout)
 
     # connect to wifi here
     def connect_button_handler(self, *args):
+        ssid = args[0]
         password = self.password_input.text
-        self.remove_widget(self.connect_layout)        
+
         # connecting layout
         self.connecting_layout = AnchorLayout(anchor_x='center', anchor_y="center")
         self.connecting_widget = GridLayout(cols=1, spacing=40)
-        self.connecting_label = Label(font_size=28, color=[0.9,0.9,1,1], text="Connecting to - " + args.ssid, halign="center", valign="center")
-        self.connecting_label2 = Label(font_size=14, color=[0.9,0.9,1,1], text="It usually takes 10 seconds to connect.")
-        self.connecting_widget.add_widget(self.connecting_label)
+        self.connecting_label2 = Label(font_size=28, color=[0.9,0.9,1,1], text="Connecting to - " + ssid, halign="center", valign="center")
+        self.connecting_label3 = Label(font_size=14, color=[0.9,0.9,1,1], text="It usually takes 10 seconds to connect.")
         self.connecting_widget.add_widget(self.connecting_label2)
+        self.connecting_widget.add_widget(self.connecting_label3)
         self.connecting_layout.add_widget(self.connecting_widget)
+
+        self.remove_widget(self.connect_layout)  
         self.add_widget(self.connecting_layout)
 
-        res = connect_to_new_ap(args.ssid, password)
-        print(res);
+        res = connect_to_new_ap(ssid, password)
+        print(res)
         # handle connect success and failure here
+        if(res == None):
+            self.connection_success_handler()
+        else:
+            self.connecting_widget.remove_widget(self.connecting_label3)
+            self.connecting_label2.text = "Failed to connect!"
+            Clock.schedule_once(self.connection_failed_handler, 3)
+    
 
     def button_callback_handler(self, *args):
-        print('args >>>>>>>>>>>>>>>>>>>')
-        print(args)
+        ssid = args[0]
         self.remove_widget(self.scrlView)
         self.connect_layout = AnchorLayout(anchor_x='center', anchor_y="center")
         self.connect_widget = GridLayout(cols=1, padding=40, spacing=40, size_hint=[0.5,1])
-        self.connecting_label = Label(font_size=28, color=[0.9,0.9,1,1], text="Connect to - " + args.ssid)
+        self.connecting_label = Label(font_size=28, color=[0.9,0.9,1,1], text="Connect to - " + ssid)
         self.password_input = TextInput(multiline=False, font_size=20, padding_x = [20,20], padding_y = [28,5], height=40, background_color=[0.4,0.4,0.7,0.4], foreground_color=[1,1,1,1], halign="center", hint_text="Enter password")
         self.cancel_button = Button(text="Back", size_hint_y=None, height=50, font_size=22, background_color=[0.4, 0.4, 0.4, 1], border=(6, 6, 6, 6))
         self.cancel_button.bind(on_press=self.back_button_handler)
         self.connect_button = Button(text="Connect", size_hint_y=None, height=50, font_size=22, background_color=[0.2, 0.2, 0.8, 1], border=(6, 6, 6, 6))
-        connect_button_callback = partial(self.connect_button_handler, args)
+        connect_button_callback = partial(self.connect_button_handler, ssid)
         self.connect_button.bind(on_press=connect_button_callback)
         button_layout = GridLayout(cols=2, spacing=40)
         button_layout.add_widget(self.cancel_button)
@@ -282,7 +295,7 @@ class WifiScreen(Screen):
         self.box.bind(minimum_height=self.box.setter('height'))
         for device in devices:
             ssid = device.ssid
-            buttoncallback = partial(self.button_callback_handler, device)
+            buttoncallback = partial(self.button_callback_handler, ssid)
             btn = Button(text=str(ssid), size_hint_y=None, height=50, font_size=22, background_color=[0.9, 0.9, 0.9, 0.2], border=(6, 6, 6, 6))
             btn.bind(on_press=buttoncallback)
             if ssid is None:
@@ -335,7 +348,6 @@ class LoginScreen(Screen):
 
     def __init__(self,**kwargs):
         super(LoginScreen, self).__init__(**kwargs)
-        print('entered login screen')
         self.login_layout = AnchorLayout(anchor_x="center", anchor_y="center")
         grid_layout_main = GridLayout(cols=1, spacing=25, size_hint=[0.4, 0.85])
         grid_layout = GridLayout(cols=1, spacing=15, size_hint=[1, 0.7])
@@ -364,7 +376,7 @@ class HomeScreen(Screen):
 
     def __init__(self, **kwargs):
         super(HomeScreen, self).__init__(**kwargs)
-        print('home screen')
+
     # This is crashing if the network connection is not available.
     # def on_enter(self):
     #     print(localStorage.getItem('user_id'))
